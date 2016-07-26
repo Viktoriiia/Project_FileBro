@@ -20,6 +20,9 @@ namespace FileManager_V2
         }
 
         private string tempFolderPath = @"D:\Temp";
+        private bool wasSomethingCut = false;
+        private FileInfo cutFile;
+        private TreeNode lastSelectedNode;
 
         private void PopulateTreeView()
         {
@@ -69,6 +72,13 @@ namespace FileManager_V2
         {
             TreeNode newSelected = e.Node;
             listView1.Items.Clear();
+            DrawListView(newSelected);
+            lastSelectedNode = newSelected;
+            
+        }
+
+        private void DrawListView(TreeNode newSelected)
+        {
             DirectoryInfo nodeDirInfo = (DirectoryInfo)newSelected.Tag;
             ListViewItem.ListViewSubItem[] subItems;
             ListViewItem item = null;
@@ -76,7 +86,7 @@ namespace FileManager_V2
             foreach (DirectoryInfo dir in nodeDirInfo.GetDirectories())
             {
                 item = new ListViewItem(dir.Name, 0);
-                subItems = new ListViewItem.ListViewSubItem[] { new ListViewItem.ListViewSubItem(item, "Directory"),new ListViewItem.ListViewSubItem(item,dir.LastAccessTime.ToShortDateString())};
+                subItems = new ListViewItem.ListViewSubItem[] { new ListViewItem.ListViewSubItem(item, "Directory"), new ListViewItem.ListViewSubItem(item, dir.LastAccessTime.ToShortDateString()) };
                 item.SubItems.AddRange(subItems);
                 listView1.Items.Add(item);
                 listView1.Items[listView1.Items.IndexOf(item)].Tag = dir;
@@ -90,7 +100,7 @@ namespace FileManager_V2
 
                 item.SubItems.AddRange(subItems);
                 listView1.Items.Add(item);
-                listView1.Items[listView1.Items.IndexOf(item)].Tag=file;
+                listView1.Items[listView1.Items.IndexOf(item)].Tag = file;
             }
 
             listView1.AutoResizeColumns(ColumnHeaderAutoResizeStyle.HeaderSize);
@@ -140,7 +150,96 @@ namespace FileManager_V2
 
         private void toolStripMenuItemPast_Click(object sender, EventArgs e)
         {
+            if (!wasSomethingCut)
+            {
+                Past();
+            }
+            else
+            {
+                Past();
 
+                if (Directory.Exists(tempFolderPath))
+                {
+                    DirectoryInfo dirInfo = new DirectoryInfo(@"D:\Temp");
+                    DeleteDirectory(tempFolderPath);
+
+                    //delete file from Temp Directory and Temp Directory
+                    //foreach (FileInfo file in dirInfo.GetFiles())
+                    //{
+                    //    file.Delete();
+                    //}
+                    //Directory.Delete(tempFolderPath);
+                }
+                FileInfo originalFileToDelete = cutFile;
+                //delete file from curent Directory
+                originalFileToDelete.Delete();
+                wasSomethingCut = false;
+            }
+
+            listView1.Items.Clear();
+            DrawListView(lastSelectedNode);
+            listView1.RedrawItems(0, listView1.Items.Count-1, false);
+        }
+
+        private void toolStripMenuItemDelete_Click(object sender, EventArgs e)
+        {
+            if(listView1.SelectedItems.Count > 0)
+            {
+
+              if (listView1.SelectedItems[0].Tag.GetType() == typeof(DirectoryInfo))
+                {
+                    if ((listView1.SelectedItems[0].Tag as DirectoryInfo).Exists)
+                    DeleteDirectory((listView1.SelectedItems[0].Tag as DirectoryInfo).FullName);
+                    MessageBox.Show((listView1.SelectedItems[0].Tag as DirectoryInfo).FullName + " " + @"file was Deleted.");
+                }
+
+                if (listView1.SelectedItems[0].Tag.GetType() == typeof(FileInfo))
+                {
+
+                    if ((listView1.SelectedItems[0].Tag as FileInfo).Exists)
+                    {
+                        File.Delete((listView1.SelectedItems[0].Tag as FileInfo).FullName);
+                        MessageBox.Show((listView1.SelectedItems[0].Tag as FileInfo).FullName + " " + @"file was Deleted.");
+                    }
+                }
+            }
+
+            listView1.Items.Clear();
+            DrawListView(lastSelectedNode);
+            listView1.RedrawItems(0, listView1.Items.Count - 1, false);
+        }
+
+        private void toolStripMenuItemCut_Click(object sender, EventArgs e)
+        {
+            if (listView1.SelectedItems.Count > 0)
+            {
+
+                if(listView1.SelectedItems[0].Tag.GetType() == typeof(FileInfo))
+                {
+                    if ((listView1.SelectedItems[0].Tag as FileInfo).Exists)
+                    {
+                        string fileNameFull = (listView1.SelectedItems[0].Tag as FileInfo).FullName;
+                        cutFile = (FileInfo)listView1.SelectedItems[0].Tag;
+                        System.Collections.Specialized.StringCollection filePath = new System.Collections.Specialized.StringCollection();
+                        filePath.Add((listView1.SelectedItems[0].Tag as FileInfo).FullName);
+                        Clipboard.SetFileDropList(filePath); // copy file to cilboard
+
+                        if (!Directory.Exists(tempFolderPath))
+                        {
+                            DirectoryInfo templetedir = Directory.CreateDirectory(tempFolderPath);
+                        }
+                        // add verifying if this file does not located at the temp folder
+                        //if yes - delete this file
+                        File.Copy(Clipboard.GetFileDropList()[0], tempFolderPath + "\\" + Path.GetFileName(Clipboard.GetFileDropList()[0]));
+                        MessageBox.Show(Clipboard.GetFileDropList()[0]);
+                    }
+                }
+            }
+            wasSomethingCut = true;
+        }
+
+        private void Past()
+        {
             try
             {
                 if ((listView1.SelectedItems[0].Tag.GetType() == typeof(FileInfo)) && Clipboard.ContainsFileDropList())
@@ -173,68 +272,31 @@ namespace FileManager_V2
                 MessageBox.Show("The file which you try to copy is already exists in this directory.", "Error");
             }
 
-            if (Directory.Exists(tempFolderPath))
-            {
-                DirectoryInfo dirInfo = new DirectoryInfo(@"D:\Temp");
-
-                foreach (FileInfo file in dirInfo.GetFiles())
-                {
-                    file.Delete();
-                }
-                Directory.Delete(tempFolderPath);
-                //delete file from curent Directory
-            }
         }
 
-        private void toolStripMenuItemDelete_Click(object sender, EventArgs e)
+        private void DeleteDirectory(string targetDir)
         {
-            if(listView1.SelectedItems.Count > 0)
+            File.SetAttributes(targetDir, FileAttributes.Normal);
+
+            string[] files = Directory.GetFiles(targetDir);
+            string[] dirs = Directory.GetDirectories(targetDir);
+
+            foreach (string file in files)
             {
-
-              if (listView1.SelectedItems[0].Tag.GetType() == typeof(DirectoryInfo))
-                {
-                    if ((listView1.SelectedItems[0].Tag as DirectoryInfo).Exists)
-                    File.Delete((listView1.SelectedItems[0].Tag as DirectoryInfo).FullName);
-                    MessageBox.Show((listView1.SelectedItems[0].Tag as DirectoryInfo).FullName + " " + @"file was Deleted.");
-                }
-
-                if (listView1.SelectedItems[0].Tag.GetType() == typeof(FileInfo))
-                {
-
-                    if ((listView1.SelectedItems[0].Tag as FileInfo).Exists)
-                    {
-                        File.Delete((listView1.SelectedItems[0].Tag as FileInfo).FullName);
-                        MessageBox.Show((listView1.SelectedItems[0].Tag as FileInfo).FullName + " " + @"file was Deleted.");
-                    }
-                }
+                File.SetAttributes(file, FileAttributes.Normal);
+                File.Delete(file);
             }
+
+            foreach (string dir in dirs)
+            {
+                DeleteDirectory(dir);
+            }
+
+            Directory.Delete(targetDir, false);
         }
 
-        private void toolStripMenuItemCut_Click(object sender, EventArgs e)
-        {
-            if (listView1.SelectedItems.Count > 0)
-            {
-
-                if(listView1.SelectedItems[0].Tag.GetType() == typeof(FileInfo))
-                {
-                    if ((listView1.SelectedItems[0].Tag as FileInfo).Exists)
-                    {
-                        string fileNameFull = (listView1.SelectedItems[0].Tag as FileInfo).FullName;
-                        System.Collections.Specialized.StringCollection filePath = new System.Collections.Specialized.StringCollection();
-                        filePath.Add((listView1.SelectedItems[0].Tag as FileInfo).FullName);
-                        Clipboard.SetFileDropList(filePath); // copy file to cilboard
-
-                        if (!Directory.Exists(tempFolderPath))
-                        {
-                            DirectoryInfo templetedir = Directory.CreateDirectory(tempFolderPath);
-                        }
-                        // add verifying if this file does not located at the temp folder
-                        //if yes - delete this file
-                        File.Copy(Clipboard.GetFileDropList()[0], tempFolderPath + "\\" + Path.GetFileName(Clipboard.GetFileDropList()[0]));
-                        MessageBox.Show(Clipboard.GetFileDropList()[0]);
-                    }
-                }
-            }
-        }
     }
+
+
+
 }

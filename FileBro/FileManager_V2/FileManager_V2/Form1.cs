@@ -119,33 +119,7 @@ namespace FileManager_V2
 
         private void toolStripMenuItemCopy_Click(object sender, EventArgs e)
         {
-            if (listView1.SelectedItems.Count > 0)
-            {
-               if ((listView1.SelectedItems[0].Tag.GetType() == typeof(FileInfo)))
-                {
-                    if ((listView1.SelectedItems[0].Tag as FileInfo).Exists)
-                    {
-                        Clipboard.Clear();
-                        string fileNameFull = (listView1.SelectedItems[0].Tag as FileInfo).FullName;
-                        System.Collections.Specialized.StringCollection filePath = new System.Collections.Specialized.StringCollection();
-                        filePath.Add((listView1.SelectedItems[0].Tag as FileInfo).FullName);
-                        Clipboard.SetFileDropList(filePath);
-                        MessageBox.Show("File Copied To Clipboard"); //Inform the user
-                    }
-                }
-                if ((listView1.SelectedItems[0].Tag.GetType() == typeof(DirectoryInfo)))
-                {
-                    if ((listView1.SelectedItems[0].Tag as DirectoryInfo).Exists)
-                    {
-                        Clipboard.Clear();
-                        string folderPathFull = (listView1.SelectedItems[0].Tag as DirectoryInfo).FullName;
-                        System.Collections.Specialized.StringCollection folderPath = new System.Collections.Specialized.StringCollection();
-                        folderPath.Add((listView1.SelectedItems[0].Tag as DirectoryInfo).FullName);
-                        Clipboard.SetFileDropList(folderPath);
-                        MessageBox.Show("File Copied To Clipboard"); //Inform the user // add permission!!!
-                    }
-                }
-            }
+            Copy();
         }
 
         private void toolStripMenuItemPast_Click(object sender, EventArgs e)
@@ -238,6 +212,71 @@ namespace FileManager_V2
             wasSomethingCut = true;
         }
 
+
+        private void toolStripMenuItemNewFolder_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                string folderName = (listView1.SelectedItems[0].Tag as FileInfo).DirectoryName;
+                string pathString = System.IO.Path.Combine(folderName, "SubFolder");
+                //MessageBox.Show(targetDir);
+                // Create a file name for the file you want to create.  
+                Directory.CreateDirectory(pathString);
+                string fileName = Path.GetRandomFileName();
+                pathString = System.IO.Path.Combine(pathString, fileName);
+
+                listView1.Items.Clear();
+                DrawListView(lastSelectedNode);
+                listView1.RedrawItems(0, listView1.Items.Count - 1, false);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error - " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            
+
+
+        }
+
+
+        private void copyToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            Copy();
+        }
+
+
+
+        private void Copy()
+        {
+            if (listView1.SelectedItems.Count > 0)
+            {
+                if ((listView1.SelectedItems[0].Tag.GetType() == typeof(FileInfo)))
+                {
+                    if ((listView1.SelectedItems[0].Tag as FileInfo).Exists)
+                    {
+                        Clipboard.Clear();
+                        string fileNameFull = (listView1.SelectedItems[0].Tag as FileInfo).FullName;
+                        System.Collections.Specialized.StringCollection filePath = new System.Collections.Specialized.StringCollection();
+                        filePath.Add((listView1.SelectedItems[0].Tag as FileInfo).FullName);
+                        Clipboard.SetFileDropList(filePath);
+                        MessageBox.Show("File Copied To Clipboard"); //Inform the user
+                    }
+                }
+                if ((listView1.SelectedItems[0].Tag.GetType() == typeof(DirectoryInfo)))
+                {
+                    if ((listView1.SelectedItems[0].Tag as DirectoryInfo).Exists)
+                    {
+                        Clipboard.Clear();
+                        string folderPathFull = (listView1.SelectedItems[0].Tag as DirectoryInfo).FullName;
+                        System.Collections.Specialized.StringCollection folderPath = new System.Collections.Specialized.StringCollection();
+                        folderPath.Add((listView1.SelectedItems[0].Tag as DirectoryInfo).FullName);
+                        Clipboard.SetFileDropList(folderPath);
+                        MessageBox.Show("File Copied To Clipboard"); //Inform the user // add permission!!!
+                    }
+                }
+            }
+        }
+
         private void Past()
         {
             try
@@ -260,6 +299,8 @@ namespace FileManager_V2
             {
                 if ((listView1.SelectedItems[0].Tag.GetType() == typeof(DirectoryInfo)) && Clipboard.ContainsFileDropList())
                 {
+                    if(Clipboard.ContainsFileDropList().GetType() == typeof(DirectoryInfo)) { }
+
                     string targetDir = (listView1.SelectedItems[0].Tag as DirectoryInfo).FullName;
                     File.Copy(Clipboard.GetFileDropList()[0], targetDir + "\\" + Path.GetFileName(Clipboard.GetFileDropList()[0]));
                     Clipboard.Clear();
@@ -271,7 +312,6 @@ namespace FileManager_V2
             {
                 MessageBox.Show("The file which you try to copy is already exists in this directory.", "Error");
             }
-
         }
 
         private void DeleteDirectory(string targetDir)
@@ -294,6 +334,7 @@ namespace FileManager_V2
 
             Directory.Delete(targetDir, false);
         }
+
 
     }
 
